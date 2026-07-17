@@ -27,7 +27,10 @@ const PoolBoy = (() => {
     notifPref: "poolboy_notif_pref_v3"
   };
 
-  const DEFAULT_SETTINGS = { nom: "Ma piscine", volume: 27, diametre: 5.49, hauteur: 1.32, lat: 48.6444, lon: 2.8328 };
+  const DEFAULT_SETTINGS = {
+    nom: "Ma piscine", volume: 27, diametre: 5.49, hauteur: 1.32, lat: 48.6444, lon: 2.8328,
+    tauxPh: 15, tauxChlore: 20, tauxStab: 8, tauxFlocPastille: 50, tauxFlocLiquide: 10
+  };
 
   /* =======================================================
      2. POINTS D'EXTENSION (hors V3, architecture anticipée)
@@ -129,17 +132,23 @@ const PoolBoy = (() => {
     phMoins(actuel, cible) {
       const ecart = actuel - cible;
       if (ecart <= 0) return null;
-      // Estimation générique indicative : ~150 g de pH- granulaire / m³ / point de pH
-      return Math.round(this.volumeActif() * ecart * 150);
+      const taux = Store.getSettings().tauxPh ?? DEFAULT_SETTINGS.tauxPh; // g / m³ / 0,1 point de pH
+      return Math.round(this.volumeActif() * (ecart / 0.1) * taux);
     },
     chloreChoc() {
-      // Base indicative : 20 g / m³ pour un traitement choc non stabilisé
-      return Math.round(this.volumeActif() * 20);
+      const taux = Store.getSettings().tauxChlore ?? DEFAULT_SETTINGS.tauxChlore; // g / m³
+      return Math.round(this.volumeActif() * taux);
     },
     sel(actuel, cible) {
       const ecart = cible - actuel;
       if (ecart <= 0) return null;
       return (this.volumeActif() * ecart) / 1000; // kg
+    },
+    stabilisant(actuel, cible) {
+      const ecart = cible - actuel;
+      if (ecart <= 0) return null;
+      const taux = Store.getSettings().tauxStab ?? DEFAULT_SETTINGS.tauxStab; // g / m³ / mg/L
+      return Math.round(this.volumeActif() * ecart * taux);
     },
     dureeFiltration(temp) {
       const t = parseFloat(temp);
@@ -148,8 +157,11 @@ const PoolBoy = (() => {
     },
     floculant() {
       const v = this.volumeActif();
-      const pastilles = Math.max(1, Math.round(v / 50));
-      const dosesLiquide = Math.max(1, Math.round(v / 10));
+      const s = Store.getSettings();
+      const tauxPastille = s.tauxFlocPastille ?? DEFAULT_SETTINGS.tauxFlocPastille;
+      const tauxLiquide = s.tauxFlocLiquide ?? DEFAULT_SETTINGS.tauxFlocLiquide;
+      const pastilles = Math.max(1, Math.round(v / tauxPastille));
+      const dosesLiquide = Math.max(1, Math.round(v / tauxLiquide));
       return { pastilles, dosesLiquide };
     }
   };
@@ -265,7 +277,7 @@ const PoolBoy = (() => {
       }
 
       if (m.contexte && m.contexte.length) {
-        if (m.contexte.includes("canicule")) conseils.push({ type: "warn", texte: "Canicule : le chlore se consomme plus vite, contrôle et filtre plus longtemps." });
+        if (m.contexte.includes("canicule")) conseils.push({ type: "warn", texte: "Canicule : le chlore se consomme plus vite, contrôle et filtre plus longtemps. Pense aussi à débâcher la piscine en journée si elle est couverte : une eau chaude et confinée sous bâche favorise la prolifération d'algues et de bactéries." });
         if (m.contexte.includes("orage")) conseils.push({ type: "warn", texte: "Orage récent : recontrôle le pH et le chlore, la pluie les fait varier." });
         if (m.contexte.includes("forte_baignade")) conseils.push({ type: "warn", texte: "Forte fréquentation : le chlore se consomme plus vite, surveille dans les heures qui suivent." });
       }
@@ -491,6 +503,9 @@ const PoolBoy = (() => {
       if (exploitables.length < 2 || typeof Chart === "undefined") {
         canvas.hidden = true;
         emptyNote.hidden = false;
+        emptyNote.textContent = typeof Chart === "undefined"
+          ? "Graphique indisponible (librairie non chargée — vérifie ta connexion et recharge la page)."
+          : "Ajoute au moins 2 analyses pour voir apparaître un graphique.";
         if (this.instance) { this.instance.destroy(); this.instance = null; }
         return;
       }
@@ -576,6 +591,10 @@ const PoolBoy = (() => {
 
   /* =======================================================
      6septies. ANALYSE PHOTO (bêta) — appelle /api/analyse-photo
+     Cible la pression du filtre (lecture de manomètre) et l'aspect
+     de l'eau (clarté/turbidité) — utile même avec un photomètre
+     électronique (PoolLab), qui donne déjà pH/chlore/TAC/stabilisant
+     en chiffres exacts sans besoin d'assistance photo pour ces valeurs.
      L'image est redimensionnée côté client avant envoi pour
      limiter la taille de la requête et le coût de l'appel IA.
      ======================================================= */
@@ -640,11 +659,8 @@ const PoolBoy = (() => {
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
 
-        if (data.ph !== null && data.ph !== undefined) document.getElementById("in-ph").value = data.ph;
-        if (data.chlore !== null && data.chlore !== undefined) document.getElementById("in-chlore").value = data.chlore;
-        if (data.chloreTotal !== null && data.chloreTotal !== undefined) document.getElementById("in-chlore-total").value = data.chloreTotal;
-        if (data.tac !== null && data.tac !== undefined) document.getElementById("in-tac").value = data.tac;
-        if (data.stabilisant !== null && data.stabilisant !== undefined) document.getElementById("in-stabilisant").value = data.stabilisant;
+        if (data.pression !== null && data.pression !== undefined) document.getElementById("in-pression").value = data.pression;
+        if (data.aspect) document.getElementById("in-aspect").value = data.aspect;
 
         const confMap = { haute: "Confiance haute", moyenne: "Confiance moyenne", faible: "Confiance faible" };
         status.textContent = `${confMap[data.confiance] || "Estimation"} — ${data.note || "vérifie les valeurs avant d'enregistrer."}`;
@@ -911,6 +927,12 @@ const PoolBoy = (() => {
     /* ---------- PLUS (guides) ---------- */
     renderPlus() {
       this._updateNotifStatus();
+      const s = Store.getSettings();
+      document.getElementById("taux-ph").value = s.tauxPh;
+      document.getElementById("taux-chlore").value = s.tauxChlore;
+      document.getElementById("taux-stab").value = s.tauxStab;
+      document.getElementById("taux-floc-pastille").value = s.tauxFlocPastille;
+      document.getElementById("taux-floc-liquide").value = s.tauxFlocLiquide;
       const guidesEl = document.getElementById("guides-list");
       guidesEl.innerHTML = GUIDES.map(g => `
         <div class="accordion-item" data-id="${g.id}">
@@ -954,16 +976,17 @@ const PoolBoy = (() => {
       document.getElementById("set-hauteur").value = s.hauteur;
       document.getElementById("set-lat").value = s.lat;
       document.getElementById("set-lon").value = s.lon;
-      this.updateVolumePreview();
+      this.updateVolumePreview(false);
       document.getElementById("settings-backdrop").hidden = false;
     },
     closeSettings() { document.getElementById("settings-backdrop").hidden = true; },
-    updateVolumePreview() {
+    updateVolumePreview(sync) {
       const d = parseFloat(document.getElementById("set-diametre").value) || 0;
       const h = parseFloat(document.getElementById("set-hauteur").value) || 0;
       const vGeo = Calc.volumeGeometrique(d, h);
+      if (sync) document.getElementById("set-volume").value = vGeo.toFixed(1);
       document.getElementById("set-volume-calc").textContent =
-        `Volume géométrique indicatif : ${vGeo.toFixed(2)} m³ (le volume utilisé dans les calculs est celui du champ ci-dessus).`;
+        `Volume géométrique calculé à partir du diamètre et de la hauteur : ${vGeo.toFixed(1)} m³. Modifie le diamètre ou la hauteur pour synchroniser le champ "Volume", ou corrige-le manuellement.`;
     }
   };
 
@@ -986,8 +1009,8 @@ const PoolBoy = (() => {
     document.getElementById("settings-backdrop").addEventListener("click", (e) => {
       if (e.target.id === "settings-backdrop") UI.closeSettings();
     });
-    document.getElementById("set-diametre").addEventListener("input", () => UI.updateVolumePreview());
-    document.getElementById("set-hauteur").addEventListener("input", () => UI.updateVolumePreview());
+    document.getElementById("set-diametre").addEventListener("input", () => UI.updateVolumePreview(true));
+    document.getElementById("set-hauteur").addEventListener("input", () => UI.updateVolumePreview(true));
     document.getElementById("btn-save-settings").addEventListener("click", () => {
       const volume = parseFloat(document.getElementById("set-volume").value);
       if (!volume || volume <= 0) { UI.toast("Renseigne un volume valide."); return; }
@@ -1054,6 +1077,24 @@ const PoolBoy = (() => {
       UI.toast("Action ajoutée au carnet.");
     });
 
+    // Taux de dosage personnalisés
+    document.getElementById("btn-save-taux").addEventListener("click", () => {
+      const s = Store.getSettings();
+      const tauxPh = parseFloat(document.getElementById("taux-ph").value);
+      const tauxChlore = parseFloat(document.getElementById("taux-chlore").value);
+      const tauxStab = parseFloat(document.getElementById("taux-stab").value);
+      const tauxFlocPastille = parseFloat(document.getElementById("taux-floc-pastille").value);
+      const tauxFlocLiquide = parseFloat(document.getElementById("taux-floc-liquide").value);
+      Store.setSettings(Object.assign({}, s, {
+        tauxPh: tauxPh > 0 ? tauxPh : DEFAULT_SETTINGS.tauxPh,
+        tauxChlore: tauxChlore > 0 ? tauxChlore : DEFAULT_SETTINGS.tauxChlore,
+        tauxStab: tauxStab > 0 ? tauxStab : DEFAULT_SETTINGS.tauxStab,
+        tauxFlocPastille: tauxFlocPastille > 0 ? tauxFlocPastille : DEFAULT_SETTINGS.tauxFlocPastille,
+        tauxFlocLiquide: tauxFlocLiquide > 0 ? tauxFlocLiquide : DEFAULT_SETTINGS.tauxFlocLiquide
+      }));
+      UI.toast("Taux de dosage enregistrés.");
+    });
+
     // Calculateurs
     document.getElementById("btn-calc-ph").addEventListener("click", () => {
       const actuel = parseFloat(document.getElementById("calc-ph-actuel").value);
@@ -1068,7 +1109,7 @@ const PoolBoy = (() => {
 
     document.getElementById("btn-calc-chlore").addEventListener("click", () => {
       const g = Calc.chloreChoc();
-      document.getElementById("res-chlore").textContent = `≈ ${g} g pour ${Calc.volumeActif()} m³ — respecte le délai de baignade indiqué sur le produit.`;
+      document.getElementById("res-chlore").textContent = `≈ ${g} g pour ${Calc.volumeActif()} m³ — idéalement le soir ou par temps couvert (les UV dégradent vite le chlore non stabilisé en plein soleil), filtration en marche toute la nuit. Respecte le délai de baignade indiqué sur le produit.`;
     });
 
     document.getElementById("btn-calc-sel").addEventListener("click", () => {
@@ -1080,6 +1121,17 @@ const PoolBoy = (() => {
       res.textContent = kg === null
         ? "Le taux de sel actuel est déjà égal ou supérieur à la cible."
         : `≈ ${kg.toFixed(1)} kg de sel pour ${Calc.volumeActif()} m³ — dissous progressivement, filtration en marche.`;
+    });
+
+    document.getElementById("btn-calc-stab").addEventListener("click", () => {
+      const actuel = parseFloat(document.getElementById("calc-stab-actuel").value);
+      const cible = parseFloat(document.getElementById("calc-stab-cible").value);
+      const res = document.getElementById("res-stab");
+      if (isNaN(actuel) || isNaN(cible)) { res.textContent = "Renseigne le stabilisant actuel et cible."; return; }
+      const g = Calc.stabilisant(actuel, cible);
+      res.textContent = g === null
+        ? "Le stabilisant actuel est déjà égal ou supérieur à la cible."
+        : `≈ ${g} g pour ${Calc.volumeActif()} m³ — dissous progressivement, filtration en marche, recontrôle après 24h (dissolution lente).`;
     });
 
     document.getElementById("btn-calc-filt").addEventListener("click", () => {

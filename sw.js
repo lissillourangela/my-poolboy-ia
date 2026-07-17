@@ -2,14 +2,14 @@
    Stratégie : cache-first pour les fichiers statiques de l'app,
    avec repli réseau puis mise à jour du cache. */
 
-const CACHE_NAME = "poolboy-ia-v13";
+const CACHE_NAME = "poolboy-ia-v17";
 const FICHIERS_A_METTRE_EN_CACHE = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.json",
-  "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"
+  "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
 ];
 
 self.addEventListener("install", (event) => {
