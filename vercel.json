@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "api/diagnostic-ia.js": { "maxDuration": 30 },
+    "api/analyse-photo.js": { "maxDuration": 30 }
+  }
+}

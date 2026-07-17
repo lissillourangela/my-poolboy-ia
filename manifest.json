@@ -1,0 +1,26 @@
+{
+  "name": "My PoolBoy IA",
+  "short_name": "PoolBoy IA",
+  "description": "Carnet et assistant pour piscine Intex ronde, filtre à sable et électrolyseur au sel.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F2F2F7",
+  "theme_color": "#F7F8FA",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%23007AFF'/%3E%3Cpath d='M28 100c15-16 24 16 38 0s24-16 38 0 24 16 38 0 15-12 20-16' stroke='%23FFFFFF' stroke-width='11' fill='none' stroke-linecap='round'/%3E%3Cpath d='M28 132c15-16 24 16 38 0s24-16 38 0 24 16 38 0 15-12 20-16' stroke='%23FFFFFF' stroke-width='11' fill='none' stroke-linecap='round' opacity='0.55'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='104' fill='%23007AFF'/%3E%3Cpath d='M74 266c40-42 64 42 100 0s64-42 100 0 64 42 100 0 40-32 54-42' stroke='%23FFFFFF' stroke-width='28' fill='none' stroke-linecap='round'/%3E%3Cpath d='M74 350c40-42 64 42 100 0s64-42 100 0 64 42 100 0 40-32 54-42' stroke='%23FFFFFF' stroke-width='28' fill='none' stroke-linecap='round' opacity='0.55'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
