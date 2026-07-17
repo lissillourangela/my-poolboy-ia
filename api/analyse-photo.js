@@ -5,15 +5,17 @@
    La clé API reste côté serveur, jamais exposée au navigateur.
    ========================================================= */
 
-const SYSTEM_PROMPT = `Tu es un expert en lecture de testeurs de piscine (bandelettes colorimétriques ou kits à réactifs liquides type pastilles/gouttes).
-On te fournit une photo d'un testeur après réaction. Estime, à partir des couleurs visibles :
-- le pH (échelle typique 6.8 à 8.4)
-- le taux de chlore libre en mg/L (échelle typique 0 à 10)
+const SYSTEM_PROMPT = `Tu es un expert en lecture d'instruments et en observation visuelle de piscines. La photo peut montrer :
+(a) le manomètre (cadran à aiguille) du filtre à sable, indiquant une pression en bar, et/ou
+(b) l'aspect général de l'eau du bassin (couleur, transparence).
 
-Si une valeur n'est pas lisible ou absente de la photo, mets null pour ce champ plutôt que d'inventer un chiffre.
+Pour le manomètre : lis la valeur indiquée par la position de l'aiguille sur le cadran, en bar (échelle typique 0 à 3 bar).
+Pour l'aspect de l'eau : classe-le dans une seule de ces catégories : "limpide" (eau claire et transparente), "trouble" (légèrement voilée), "verte" (teinte verte, présence probable d'algues), "laiteuse" (blanchâtre, opaque).
+
+Si le manomètre ou le bassin n'est pas visible sur la photo, mets null pour le champ correspondant plutôt que d'inventer une valeur.
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans aucun texte, explication ou balise markdown avant ou après, au format EXACT suivant :
-{"ph": <nombre|null>, "chlore": <nombre|null>, "confiance": "haute"|"moyenne"|"faible", "note": "<courte remarque en français : type de testeur détecté, limite de lecture, ou conseil>"}`;
+{"pression": <nombre|null>, "aspect": "limpide"|"trouble"|"verte"|"laiteuse"|null, "confiance": "haute"|"moyenne"|"faible", "note": "<courte remarque en français : ce qui a été détecté sur la photo, ou limite de lecture>"}`;
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
