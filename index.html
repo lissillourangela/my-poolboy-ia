@@ -14,7 +14,7 @@
 
 <title>My PoolBoy IA</title>
 <link rel="stylesheet" href="styles.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 </head>
 <body>
 
@@ -90,11 +90,11 @@
 
     <div class="list-card photo-card">
       <p class="card-label">Analyse photo (bêta)</p>
-      <p class="calc-hint">Prends en photo ton testeur pH / chlore, l'IA estime les valeurs. Vérifie toujours avant d'enregistrer.</p>
+      <p class="calc-hint">Photographie le manomètre du filtre et/ou le bassin : l'IA détecte la pression et/ou l'aspect de l'eau. Vérifie toujours avant d'enregistrer.</p>
       <input type="file" id="photo-input" accept="image/*" hidden>
       <button type="button" class="btn-block btn-secondary" id="btn-photo-pick">📷 Prendre / choisir une photo</button>
       <div id="photo-preview-wrap" hidden>
-        <img id="photo-preview" alt="Aperçu du testeur photographié">
+        <img id="photo-preview" alt="Aperçu photo du manomètre ou du bassin">
         <button type="button" class="btn-block btn-primary" id="btn-photo-analyser">Analyser la photo</button>
         <p class="calc-hint" id="photo-status"></p>
       </div>
@@ -213,6 +213,32 @@
   <!-- ============ PLUS (calculatrices, guides, réglages) ============ -->
   <section class="view" data-view="plus" hidden>
 
+    <p class="section-label">Taux de dosage (selon tes produits)</p>
+    <div class="list-card">
+      <p class="calc-hint">Ajuste ces taux d'après la notice de tes produits — les calculateurs ci-dessous les utiliseront automatiquement, à la place d'une moyenne générique.</p>
+      <div class="form-row">
+        <label for="taux-ph">pH- : grammes par m³ pour -0,1 pH</label>
+        <input type="number" step="0.5" min="0" id="taux-ph" inputmode="decimal">
+      </div>
+      <div class="form-row">
+        <label for="taux-chlore">Chlore choc : grammes par m³</label>
+        <input type="number" step="1" min="0" id="taux-chlore" inputmode="decimal">
+      </div>
+      <div class="form-row">
+        <label for="taux-stab">Stabilisant : grammes par m³ pour +1 mg/L</label>
+        <input type="number" step="1" min="0" id="taux-stab" inputmode="decimal">
+      </div>
+      <div class="form-row">
+        <label for="taux-floc-pastille">Floculant pastille : m³ couverts par pastille</label>
+        <input type="number" step="1" min="1" id="taux-floc-pastille" inputmode="decimal">
+      </div>
+      <div class="form-row">
+        <label for="taux-floc-liquide">Floculant liquide : m³ couverts par dose</label>
+        <input type="number" step="1" min="1" id="taux-floc-liquide" inputmode="decimal">
+      </div>
+      <button class="btn-block btn-primary" id="btn-save-taux">Enregistrer les taux</button>
+    </div>
+
     <p class="section-label">Calculatrices</p>
     <div class="list-card calc-card">
       <p class="calc-title">pH moins</p>
@@ -226,7 +252,7 @@
 
     <div class="list-card calc-card">
       <p class="calc-title">Chlore choc</p>
-      <p class="calc-hint">Base : 20 g/m³ pour un traitement choc non stabilisé (indicatif, vérifie ton produit).</p>
+      <p class="calc-hint">Utilise le taux réglé ci-dessus (section "Taux de dosage") — vérifie la notice de ton produit.</p>
       <button class="btn-block btn-secondary" id="btn-calc-chlore">Calculer</button>
       <p class="calc-result" id="res-chlore"></p>
     </div>
@@ -239,6 +265,17 @@
       </div>
       <button class="btn-block btn-secondary" id="btn-calc-sel">Calculer</button>
       <p class="calc-result" id="res-sel"></p>
+    </div>
+
+    <div class="list-card calc-card">
+      <p class="calc-title">Stabilisant (acide cyanurique)</p>
+      <div class="form-row-inline">
+        <div><label for="calc-stab-actuel">Stabilisant actuel (mg/L)</label><input type="number" step="1" id="calc-stab-actuel" inputmode="decimal" placeholder="20"></div>
+        <div><label for="calc-stab-cible">Stabilisant cible (mg/L)</label><input type="number" step="1" id="calc-stab-cible" inputmode="decimal" value="40"></div>
+      </div>
+      <p class="calc-hint">Utilise le taux réglé ci-dessus — au-delà de 100 mg/L le chlore devient inefficace, mieux vaut alors diluer l'eau que sur-doser.</p>
+      <button class="btn-block btn-secondary" id="btn-calc-stab">Calculer</button>
+      <p class="calc-result" id="res-stab"></p>
     </div>
 
     <div class="list-card calc-card">
